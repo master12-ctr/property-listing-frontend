@@ -3,8 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import Navbar from '@/components/shared/Navbar';
-// Remove AuthInitializer temporarily if causing issues
-// import { AuthInitializer } from '@/components/shared/AuthInitializer';
+import { AuthInitializer } from '@/components/shared/AuthInitializer';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,11 +18,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body className={inter.className}>
         <Providers>
-          {/* Temporarily remove AuthInitializer */}
-          {/* <AuthInitializer /> */}
+          <AuthInitializer />
           <Navbar />
           <main className="min-h-screen bg-gray-50 pt-16">
             {children}
