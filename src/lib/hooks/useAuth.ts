@@ -10,6 +10,10 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
+      // Store tenant ID if available
+      if (data.user?.tenantId) {
+        localStorage.setItem('tenantId', data.user.tenantId);
+      }
       login(data.user, data.access_token);
       toast.success('Login successful!');
     },
@@ -21,6 +25,9 @@ export function useAuth() {
   const registerMutation = useMutation({
     mutationFn: authService.register,
     onSuccess: (data) => {
+      if (data.user?.tenantId) {
+        localStorage.setItem('tenantId', data.user.tenantId);
+      }
       login(data.user, data.access_token);
       toast.success('Registration successful!');
     },
@@ -33,21 +40,14 @@ export function useAuth() {
     queryKey: ['profile'],
     queryFn: authService.getProfile,
     enabled: isAuthenticated,
-  });
-
-  // Handle profile query side effects
-  useEffect(() => {
-    if (profileQuery.data) {
-      updateUser(profileQuery.data);
-    }
-  }, [profileQuery.data, updateUser]);
-
-  useEffect(() => {
-    if (profileQuery.error) {
+    onSuccess: (data) => {
+      updateUser(data);
+    },
+    onError: () => {
       logout();
       toast.error('Session expired. Please login again.');
-    }
-  }, [profileQuery.error, logout]);
+    },
+  });
 
   const hasPermission = (permission: string) => {
     return user?.permissions?.includes(permission) || false;
@@ -60,9 +60,12 @@ export function useAuth() {
   return {
     user,
     isAuthenticated,
-    login: loginMutation.mutate,
-    register: registerMutation.mutate,
-    logout,
+    login: (credentials: any) => loginMutation.mutateAsync(credentials),
+    register: (data: any) => registerMutation.mutateAsync(data),
+    logout: () => {
+      authService.logout();
+      logout();
+    },
     isLoading: loginMutation.isPending || registerMutation.isPending,
     profileQuery,
     hasPermission,

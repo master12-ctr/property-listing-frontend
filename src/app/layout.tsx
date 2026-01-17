@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import Navbar from '@/components/shared/Navbar';
-import { AuthInitializer } from '@/components/shared/AuthInitializer';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,13 +18,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head />
       <body className={inter.className}>
         <Providers>
-          <AuthInitializer />
           <Navbar />
-          <main className="min-h-screen bg-gray-50 pt-16">
-            {children}
-          </main>
+          {children}
         </Providers>
       </body>
     </html>

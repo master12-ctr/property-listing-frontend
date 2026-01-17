@@ -9,7 +9,7 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and tenant ID
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
@@ -18,11 +18,9 @@ apiClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
       
-      // Add tenant ID if available
-      const tenantId = localStorage.getItem('tenantId');
-      if (tenantId) {
-        config.headers['X-Tenant-ID'] = tenantId;
-      }
+      // Add tenant ID from localStorage or use default
+      const tenantId = localStorage.getItem('tenantId') || 'main';
+      config.headers['X-Tenant-ID'] = tenantId;
     }
     return config;
   },
@@ -35,10 +33,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // Handle 401 errors (token expired)
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
+    if (error.response?.status === 401) {
       // Clear auth and redirect to login
       if (typeof window !== 'undefined') {
         localStorage.removeItem('token');
