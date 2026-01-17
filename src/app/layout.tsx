@@ -18,11 +18,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head />
       <body className={inter.className}>
         <Providers>
-          <Navbar />
-          {children}
+          <div className="min-h-screen bg-gray-50">
+            <Navbar />
+            <main className="pt-16"> {/* Added padding-top for navbar */}
+              {children}
+            </main>
+          </div>
         </Providers>
       </body>
     </html>

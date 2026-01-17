@@ -10,10 +10,11 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
-      // Store tenant ID if available
-      if (data.user?.tenantId) {
-        localStorage.setItem('tenantId', data.user.tenantId);
-      }
+      // Store auth data
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('tenantId', data.user.tenantId);
+      
       login(data.user, data.access_token);
       toast.success('Login successful!');
     },
@@ -25,9 +26,10 @@ export function useAuth() {
   const registerMutation = useMutation({
     mutationFn: authService.register,
     onSuccess: (data) => {
-      if (data.user?.tenantId) {
-        localStorage.setItem('tenantId', data.user.tenantId);
-      }
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('tenantId', data.user.tenantId);
+      
       login(data.user, data.access_token);
       toast.success('Registration successful!');
     },
@@ -44,8 +46,8 @@ export function useAuth() {
       updateUser(data);
     },
     onError: () => {
-      logout();
-      toast.error('Session expired. Please login again.');
+      // Don't logout on profile fetch error, just show toast
+      toast.error('Failed to fetch profile');
     },
   });
 
@@ -53,9 +55,14 @@ export function useAuth() {
     return user?.permissions?.includes(permission) || false;
   };
 
-  const isAdmin = hasPermission('system.metrics.read');
-  const isPropertyOwner = hasPermission('property.create');
-  const isRegularUser = hasPermission('favorite.create');
+  // Check for admin permissions
+  const isAdmin = hasPermission('system.metrics.read') || 
+                  hasPermission('system.config.update') ||
+                  hasPermission('user.read.all');
+
+  // Check for property owner permissions
+  const isPropertyOwner = hasPermission('property.create') || 
+                         hasPermission('property.update.own');
 
   return {
     user,
@@ -63,14 +70,16 @@ export function useAuth() {
     login: (credentials: any) => loginMutation.mutateAsync(credentials),
     register: (data: any) => registerMutation.mutateAsync(data),
     logout: () => {
-      authService.logout();
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('tenantId');
       logout();
+      window.location.href = '/login';
     },
     isLoading: loginMutation.isPending || registerMutation.isPending,
     profileQuery,
     hasPermission,
     isAdmin,
     isPropertyOwner,
-    isRegularUser,
   };
 }

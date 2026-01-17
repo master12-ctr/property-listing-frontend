@@ -10,15 +10,28 @@ import {
   EnvelopeIcon,
   ChartBarIcon,
 } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function AdminDashboard() {
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const router = useRouter();
   
-  const { data: metrics, isLoading } = useQuery({
+  const { data: metrics, isLoading, error } = useQuery({
     queryKey: ['admin-metrics'],
     queryFn: () => adminService.getSystemMetrics(),
     enabled: isAdmin,
   });
+
+  useEffect(() => {
+    if (!isAdmin && user) {
+      router.push('/dashboard/user');
+    }
+  }, [isAdmin, user, router]);
+
+  if (!user) {
+    return null;
+  }
 
   if (!isAdmin) {
     return (
@@ -33,6 +46,15 @@ export default function AdminDashboard() {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold text-gray-900">Error Loading Metrics</h2>
+        <p className="text-gray-600 mt-2">Please try again later</p>
       </div>
     );
   }
