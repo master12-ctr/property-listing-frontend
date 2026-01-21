@@ -7,13 +7,28 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  phone: z.string().optional(),
-  company: z.string().optional(),
+  name: z.string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(50, 'Name must be less than 50 characters'),
+  email: z.string()
+    .email('Invalid email address')
+    .max(100, 'Email must be less than 100 characters'),
+  password: z.string()
+    .min(6, 'Password must be at least 6 characters')
+    .max(50, 'Password must be less than 50 characters'),
+  phone: z.string()
+    .min(10, 'Phone must be at least 10 characters')
+    .max(15, 'Phone must be less than 15 characters')
+    .optional()
+    .or(z.literal('')), // Allow empty string
+  company: z.string()
+    .min(2, 'Company must be at least 2 characters')
+    .max(50, 'Company must be less than 50 characters')
+    .optional()
+    .or(z.literal('')), // Allow empty string
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -29,15 +44,40 @@ export default function RegisterPage() {
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
+    defaultValues: {
+      phone: '',
+      company: '',
+    },
   });
   
   const onSubmit = async (data: RegisterFormData) => {
     setError('');
+    
     try {
-      await registerUser(data);
+      // Prepare the data for the backend
+      const payload: any = {
+        name: data.name.trim(),
+        email: data.email.trim().toLowerCase(),
+        password: data.password,
+      };
+      
+      // Only include phone if provided
+      if (data.phone && data.phone.trim()) {
+        payload.phone = data.phone.trim();
+      }
+      
+      // Only include company if provided
+      if (data.company && data.company.trim()) {
+        payload.company = data.company.trim();
+      }
+      
+      console.log('Register payload:', payload); // For debugging
+      
+      await registerUser(payload);
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      console.error('Registration error:', err);
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     }
   };
   
@@ -54,6 +94,14 @@ export default function RegisterPage() {
               sign in to existing account
             </Link>
           </p>
+       
+
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800 text-center">
+              <strong>Note:</strong> This registration creates a Regular User account.
+              Property Owner and Admin accounts are created by administrators.
+            </p>
+          </div>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
@@ -66,7 +114,7 @@ export default function RegisterPage() {
           <div className="rounded-md shadow-sm space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full Name
+                Full Name *
               </label>
               <input
                 {...register('name')}
@@ -81,7 +129,7 @@ export default function RegisterPage() {
             
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
+                Email Address *
               </label>
               <input
                 {...register('email')}
@@ -96,7 +144,7 @@ export default function RegisterPage() {
             
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+                Password *
               </label>
               <input
                 {...register('password')}
@@ -119,6 +167,9 @@ export default function RegisterPage() {
                 className="input mt-1"
                 placeholder="+1 (555) 123-4567"
               />
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+              )}
             </div>
             
             <div>
@@ -131,6 +182,9 @@ export default function RegisterPage() {
                 className="input mt-1"
                 placeholder="Your Company"
               />
+              {errors.company && (
+                <p className="mt-1 text-sm text-red-600">{errors.company.message}</p>
+              )}
             </div>
           </div>
           
@@ -138,10 +192,14 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full btn-primary py-3 px-4 text-sm font-medium"
+              className="w-full btn-primary py-3 px-4 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Creating account...' : 'Create Account'}
             </button>
+          </div>
+          
+          <div className="text-sm text-gray-600 text-center">
+            <p>By registering, you agree to our Terms of Service and Privacy Policy</p>
           </div>
         </form>
       </div>

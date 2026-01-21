@@ -2,19 +2,21 @@
 
 import { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
-import { User } from '@/types';
 import { useAuth } from '@/lib/hooks/useAuth';
 import Link from 'next/link';
-import { ChevronDownIcon, UserCircleIcon, CogIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, UserCircleIcon, CogIcon, ArrowRightOnRectangleIcon, HomeIcon } from '@heroicons/react/24/outline';
 
-interface UserMenuProps {
-  user: User;
-}
+export function UserMenu() {
+  const { user, logout, isAdmin, isPropertyOwner } = useAuth();
 
-export function UserMenu({ user }: UserMenuProps) {
-  const { logout } = useAuth();
+  if (!user) return null;
 
   const menuItems = [
+    {
+      label: 'Dashboard',
+      href: '/dashboard/user',
+      icon: HomeIcon,
+    },
     {
       label: 'Profile',
       href: '/dashboard/user/profile',
@@ -33,17 +35,34 @@ export function UserMenu({ user }: UserMenuProps) {
     },
   ];
 
+  const getRoleBadge = () => {
+    if (isAdmin) return 'Admin';
+    if (isPropertyOwner) return 'Property Owner';
+    return 'User';
+  };
+
+  const getRoleColor = () => {
+    if (isAdmin) return 'bg-purple-100 text-purple-800';
+    if (isPropertyOwner) return 'bg-green-100 text-green-800';
+    return 'bg-blue-100 text-blue-800';
+  };
+
   return (
     <Menu as="div" className="relative">
       <Menu.Button className="flex items-center space-x-3 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors">
         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
           <span className="text-blue-600 font-semibold">
-            {user.name.charAt(0).toUpperCase()}
+            {user.name?.charAt(0).toUpperCase() || 'U'}
           </span>
         </div>
         <div className="hidden md:block text-left">
           <p className="text-sm font-medium text-gray-900">{user.name}</p>
           <p className="text-xs text-gray-500 truncate max-w-[120px]">{user.email}</p>
+           <div className="flex items-center space-x-2">
+            <span className={`text-xs px-2 py-0.5 rounded-full ${getRoleColor()}`}>
+              {getRoleBadge()}
+            </span>
+          </div>
         </div>
         <ChevronDownIcon className="w-4 h-4 text-gray-500 hidden md:block" />
       </Menu.Button>

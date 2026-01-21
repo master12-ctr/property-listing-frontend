@@ -5,18 +5,18 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { PropertyType, PropertyStatus } from '@/types';
 
 const propertyTypes: { value: PropertyType; label: string }[] = [
-  { value: 'apartment', label: 'Apartment' },
-  { value: 'house', label: 'House' },
-  { value: 'villa', label: 'Villa' },
-  { value: 'commercial', label: 'Commercial' },
-  { value: 'land', label: 'Land' },
+  { value: PropertyType.APARTMENT, label: 'Apartment' },
+  { value: PropertyType.HOUSE, label: 'House' },
+  { value: PropertyType.VILLA, label: 'Villa' },
+  { value: PropertyType.COMMERCIAL, label: 'Commercial' },
+  { value: PropertyType.LAND, label: 'Land' },
 ];
 
 const statusOptions: { value: PropertyStatus; label: string }[] = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'published', label: 'Published' },
-  { value: 'archived', label: 'Archived' },
-  { value: 'disabled', label: 'Disabled' },
+  { value: PropertyStatus.DRAFT, label: 'Draft' },
+  { value: PropertyStatus.PUBLISHED, label: 'Published' },
+  { value: PropertyStatus.ARCHIVED, label: 'Archived' },
+  { value: PropertyStatus.DISABLED, label: 'Disabled' },
 ];
 
 const sortOptions = [
@@ -108,6 +108,7 @@ export default function PropertyFilters() {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Min"
+                min="0"
               />
             </div>
             <div>
@@ -118,6 +119,7 @@ export default function PropertyFilters() {
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Max"
+                min="0"
               />
             </div>
           </div>
@@ -212,14 +214,14 @@ export default function PropertyFilters() {
         <div className="flex space-x-3 pt-4">
           <button
             type="submit"
-            className="flex-1 btn-primary py-2"
+            className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
           >
             Apply Filters
           </button>
           <button
             type="button"
             onClick={handleReset}
-            className="flex-1 btn-secondary py-2"
+            className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
           >
             Reset
           </button>

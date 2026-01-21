@@ -9,15 +9,25 @@ import { HeartIcon } from '@heroicons/react/24/outline';
 export default function FavoritesPage() {
   const { user } = useAuth();
   
-  const { data: favorites, isLoading, refetch } = useQuery({
-    queryKey: ['favorites', user?.id],
+  const { data: favoritesData, isLoading, error } = useQuery({
+    queryKey: ['favorites'],
     queryFn: () => propertyService.getFavorites(),
+    enabled: !!user?.id,
   });
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold text-gray-900">Error Loading Favorites</h2>
+        <p className="text-gray-600 mt-2">Please try again later</p>
       </div>
     );
   }
@@ -32,10 +42,14 @@ export default function FavoritesPage() {
         <p className="text-gray-600 mt-2">Your saved properties</p>
       </div>
 
-      {favorites && favorites.length > 0 ? (
+      {favoritesData && favoritesData.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {favorites.map((property) => (
-            <PropertyCard key={property.id} property={property} />
+          {favoritesData.map((property) => (
+            <PropertyCard 
+              key={property.id} 
+              property={property} 
+              showActions={true}
+            />
           ))}
         </div>
       ) : (

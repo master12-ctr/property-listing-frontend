@@ -20,6 +20,9 @@ export const authService = {
   register: (data: RegisterData) =>
     apiClient.post('/auth/register', data).then((res) => res.data),
   
+  refreshToken: (refreshToken: string) =>
+    apiClient.post('/auth/refresh', { refreshToken }).then((res) => res.data),
+  
   getProfile: () =>
     apiClient.get('/users/profile').then((res) => res.data),
 };
@@ -64,12 +67,7 @@ export const propertyService = {
   
   getMyProperties: () =>
     apiClient.get<Property[]>('/properties/my').then((res) => res.data),
-  
-  getFavorites: () =>
-    apiClient.get<Property[]>('/properties/favorites').then((res) => res.data),
-  
-  getFavoriteStatus: (id: string) =>
-    apiClient.get(`/properties/${id}/favorite/status`).then((res) => res.data),
+
   
   validateForPublishing: (id: string) =>
     apiClient.get(`/properties/${id}/validate`).then((res) => res.data),
@@ -81,6 +79,18 @@ export const propertyService = {
   
   deleteImages: (propertyId: string, urls: string[]) =>
     apiClient.delete(`/properties/${propertyId}/images`, { data: { urls } }).then((res) => res.data),
+
+// Add this method for checking favorite status:
+getFavoriteStatus: (id: string) =>
+  apiClient.get<{ isFavorited: boolean }>(`/properties/${id}/favorite/status`).then((res) => res.data),
+
+
+getFavorites: () =>
+  apiClient.get('/properties/favorites').then((res) => res.data),
+
+// Make sure the contactService has correct endpoint:
+sendMessage: (data: ContactMessage) =>
+  apiClient.post('/contact', data).then((res) => res.data),
 };
 
 // Contact Services
@@ -111,6 +121,9 @@ export const userService = {
   
   getUserById: (id: string) =>
     apiClient.get<User>(`/users/${id}`).then((res) => res.data),
+
+   deleteUser: (id: string) =>
+    apiClient.delete(`/users/${id}`).then((res) => res.data),
   
   addUserRole: (userId: string, roleId: string) =>
     apiClient.post(`/users/${userId}/roles/${roleId}`).then((res) => res.data),
@@ -156,12 +169,40 @@ export const adminService = {
 };
 
 // Image Services
+// Image Services
 export const imageService = {
-  uploadImages: (formData: FormData) =>
-    apiClient.post('/images/upload', formData, {
+  uploadImages: (files: File[], folder?: string) => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('images', file);
+    });
+    
+    if (folder) {
+      formData.append('folder', folder);
+    }
+    
+    return apiClient.post('/images/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-    }).then((res) => res.data),
+    }).then((res) => res.data);
+  },
   
   deleteImages: (urls: string[]) =>
     apiClient.delete('/images/delete', { data: { urls } }).then((res) => res.data),
+  
+  uploadPropertyImages: (propertyId: string, files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('images', file);
+    });
+    
+    return apiClient.post(`/properties/${propertyId}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((res) => res.data);
+  },
+  
+  deletePropertyImages: (propertyId: string, urls: string[]) =>
+    apiClient.delete(`/properties/${propertyId}/images`, { data: { urls } }).then((res) => res.data),
 };
+
+
+

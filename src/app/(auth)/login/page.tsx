@@ -7,10 +7,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string()
+    .email('Invalid email address')
+    .max(100, 'Email must be less than 100 characters'),
+  password: z.string()
+    .min(6, 'Password must be at least 6 characters')
+    .max(50, 'Password must be less than 50 characters'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -31,14 +36,17 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     setError('');
     try {
-      // This now returns a promise since we're using mutateAsync
-      await login(data);
-      // Redirect after successful login
+      // Format the data for backend
+      const payload = {
+        email: data.email.trim().toLowerCase(),
+        password: data.password,
+      };
+      
+      await login(payload);
       router.push('/');
     } catch (err: any) {
-      // Error is already handled by the mutation's onError
-      // Just set local error state
-      setError(err.message || 'Login failed');
+      console.error('Login error:', err);
+      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     }
   };
   
@@ -100,7 +108,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full btn-primary py-3 px-4 text-sm font-medium"
+              className="w-full btn-primary py-3 px-4 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>

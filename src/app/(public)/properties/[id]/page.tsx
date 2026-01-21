@@ -9,6 +9,7 @@ import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { useFavoriteProperty } from '@/lib/hooks/useProperties';
 import { useFavoritesStore } from '@/store/favorites.store';
 import { useState } from 'react';
+import ContactForm from '@/components/contact/ContactForm';
 
 export default function PropertyDetailPage() {
   const params = useParams();
@@ -111,44 +112,20 @@ export default function PropertyDetailPage() {
       </div>
 
       {/* Image Gallery */}
-      <div className="mb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <div className="relative h-96 rounded-xl overflow-hidden">
-              {property.images && property.images.length > 0 ? (
-                <Image
-                  src={property.images[activeImage]}
-                  alt={property.title}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-500">No Image Available</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {property.images?.slice(0, 4).map((image, index) => (
-              <button
-                key={index}
-                onClick={() => setActiveImage(index)}
-                className={`relative h-32 rounded-lg overflow-hidden ${
-                  activeImage === index ? 'ring-2 ring-blue-500' : ''
-                }`}
-              >
-                <Image
-                  src={image}
-                  alt={`${property.title} ${index + 1}`}
-                  fill
-                  className="object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+     
+     <div className="relative h-96 rounded-xl overflow-hidden">
+  {property.images && property.images.length > 0 ? (
+    <img
+      src={property.images[activeImage]}
+      alt={property.title}
+      className="object-cover w-full h-full"
+    />
+  ) : (
+    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+      <span className="text-gray-500">No Image Available</span>
+    </div>
+  )}
+</div>
 
       {/* Property Details */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -208,42 +185,15 @@ export default function PropertyDetailPage() {
           </div>
 
           {/* Contact Form */}
+          
           <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Contact Owner</h2>
-            <form className="space-y-4">
-              <div>
-                <input
-                  type="text"
-                  placeholder="Your Name"
-                  className="input"
-                />
-              </div>
-              <div>
-                <input
-                  type="email"
-                  placeholder="Your Email"
-                  className="input"
-                />
-              </div>
-              <div>
-                <input
-                  type="tel"
-                  placeholder="Phone Number (Optional)"
-                  className="input"
-                />
-              </div>
-              <div>
-                <textarea
-                  rows={4}
-                  placeholder="Your Message"
-                  className="input"
-                />
-              </div>
-              <button type="submit" className="w-full btn-primary">
-                Send Message
-              </button>
-            </form>
-          </div>
+  <h2 className="text-xl font-bold text-gray-900 mb-4">Contact Owner</h2>
+  <ContactForm 
+    propertyId={property.id}
+    propertyTitle={property.title}
+  />
+</div>
+
         </div>
       </div>
     </div>

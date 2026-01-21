@@ -13,6 +13,7 @@ import {
   ChartBarIcon,
   InboxIcon,
   PlusCircleIcon,
+  UsersIcon,
 } from '@heroicons/react/24/outline';
 
 interface DashboardSidebarProps {
@@ -45,6 +46,11 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
             href: '/dashboard/admin',
             icon: ChartBarIcon,
           },
+          {
+          name: 'User Management', // Add this
+          href: '/dashboard/admin/users',
+          icon: UsersIcon,
+        },
         ]
       : []),
     {

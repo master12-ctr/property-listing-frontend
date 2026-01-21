@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { UserMenu } from './UserMenu';
 
 export default function Navbar() {
-  const { isAuthenticated, user, isAdmin, isPropertyOwner } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white border-b z-50">
@@ -20,30 +20,12 @@ export default function Navbar() {
               <Link href="/properties" className="text-gray-700 hover:text-blue-600">
                 Browse Properties
               </Link>
-              
-              {isPropertyOwner && (
-                <Link href="/dashboard/owner" className="text-gray-700 hover:text-blue-600">
-                  My Properties
-                </Link>
-              )}
-              
-              {isAuthenticated && (
-                <Link href="/dashboard/user/favorites" className="text-gray-700 hover:text-blue-600">
-                  Favorites
-                </Link>
-              )}
-              
-              {isAdmin && (
-                <Link href="/dashboard/admin" className="text-gray-700 hover:text-blue-600">
-                  Admin Dashboard
-                </Link>
-              )}
             </div>
           </div>
           
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
-              <UserMenu user={user!} />
+              <UserMenu />
             ) : (
               <>
                 <Link href="/login" className="text-gray-700 hover:text-blue-600">

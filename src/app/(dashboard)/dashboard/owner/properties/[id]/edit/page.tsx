@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useCreateProperty } from '@/lib/hooks/useProperties';
-import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import { useProperty, useUpdateProperty } from '@/lib/hooks/useProperties';
 import { PropertyType } from '@/types';
+import toast from 'react-hot-toast';
 import ImageUploader from '@/components/shared/ImageUploader';
-import { imageService } from '@/lib/api/services';
 
 const propertySchema = z.object({
   title: z.string()
@@ -32,10 +31,15 @@ const propertySchema = z.object({
 
 type PropertyFormData = z.infer<typeof propertySchema>;
 
-export default function NewPropertyPage() {
+export default function EditPropertyPage() {
+  const params = useParams();
   const router = useRouter();
-  const createProperty = useCreateProperty();
+  const id = params.id as string;
+  const { data: property, isLoading } = useProperty(id);
+  const updateProperty = useUpdateProperty();
+  
   const [images, setImages] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
   const {
@@ -43,72 +47,86 @@ export default function NewPropertyPage() {
     handleSubmit,
     formState: { errors },
     setValue,
-    watch,
+    reset,
   } = useForm<PropertyFormData>({
     resolver: zodResolver(propertySchema),
-    defaultValues: {
-      type: 'apartment',
-      price: 0,
-      location: {
-        address: '',
-        city: '',
-        country: '',
-        state: '',
-      },
-    },
   });
 
-
-// Update the onSubmit function
-const onSubmit = async (data: PropertyFormData) => {
-  try {
-    setIsUploading(true);
-    
-    let imageUrls: string[] = [];
-    
-    // Upload images to Cloudinary first
-    if (images.length > 0) {
-      try {
-        const uploadResponse = await imageService.uploadImages(images);
-        imageUrls = uploadResponse.urls;
-        toast.success(`${images.length} images uploaded successfully`);
-      } catch (uploadError: any) {
-        console.error('Image upload failed:', uploadError);
-        toast.error('Failed to upload images. Please try again.');
-        setIsUploading(false);
-        return;
-      }
+  // Load property data into form
+  useEffect(() => {
+    if (property) {
+      reset({
+        title: property.title,
+        description: property.description,
+        location: {
+          address: property.location.address,
+          city: property.location.city,
+          country: property.location.country,
+          state: property.location.state || '',
+        },
+        price: property.price,
+        type: property.type,
+      });
+      setExistingImages(property.images || []);
     }
-    
-    // Prepare property data with uploaded image URLs
-    const propertyData = {
-      title: data.title.trim(),
-      description: data.description.trim(),
-      location: {
-        address: data.location.address.trim(),
-        city: data.location.city.trim(),
-        country: data.location.country.trim(),
-        state: data.location.state?.trim() || '',
-      },
-      price: Number(data.price),
-      type: data.type,
-      images: imageUrls,
-    };
+  }, [property, reset]);
 
-    console.log('Creating property with data:', propertyData);
-    
-    // Create property
-    const result = await createProperty.mutateAsync(propertyData);
-    toast.success('Property created successfully!');
-    
-    router.push('/dashboard/owner/properties');
-  } catch (error: any) {
-    console.error('Property creation error:', error);
-    toast.error(error.response?.data?.message || 'Failed to create property');
-  } finally {
-    setIsUploading(false);
-  }
-};
+  const onSubmit = async (data: PropertyFormData) => {
+    if (!property) return;
+
+    try {
+      setIsUploading(true);
+      
+      let imageUrls = [...existingImages];
+      
+      // Upload new images if any
+      if (images.length > 0) {
+        const formData = new FormData();
+        images.forEach((image) => {
+          formData.append('images', image);
+        });
+        
+        // Upload images
+        const uploadResult = await fetch('/api/v1/images/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: formData,
+        });
+        
+        if (uploadResult.ok) {
+          const uploadData = await uploadResult.json();
+          imageUrls = [...imageUrls, ...uploadData.urls];
+        }
+      }
+      
+      // Prepare update data
+      const updateData = {
+        title: data.title.trim(),
+        description: data.description.trim(),
+        location: {
+          address: data.location.address.trim(),
+          city: data.location.city.trim(),
+          country: data.location.country.trim(),
+          ...(data.location.state && { state: data.location.state.trim() }),
+        },
+        price: Number(data.price),
+        type: data.type,
+        images: imageUrls,
+      };
+
+      await updateProperty.mutateAsync({ id, data: updateData });
+      toast.success('Property updated successfully!');
+      
+      router.push('/dashboard/owner/properties');
+    } catch (error: any) {
+      console.error('Property update error:', error);
+      toast.error(error.response?.data?.message || 'Failed to update property');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const propertyTypes = [
     { value: 'apartment', label: 'Apartment' },
@@ -118,11 +136,28 @@ const onSubmit = async (data: PropertyFormData) => {
     { value: 'land', label: 'Land' },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!property) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold text-gray-900">Property Not Found</h2>
+        <p className="text-gray-600 mt-2">The property you're trying to edit doesn't exist.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Create New Property</h1>
-        <p className="text-gray-600 mt-2">Fill in the details to list your property</p>
+        <h1 className="text-3xl font-bold text-gray-900">Edit Property</h1>
+        <p className="text-gray-600 mt-2">Update your property details</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -180,9 +215,9 @@ const onSubmit = async (data: PropertyFormData) => {
                   <p className="mt-1 text-sm text-red-600">{errors.type.message}</p>
                 )}
               </div>
- 
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">   
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Price (ETB) *
                 </label>
                 <input
@@ -267,13 +302,14 @@ const onSubmit = async (data: PropertyFormData) => {
           </div>
         </div>
 
-        {/* Images - Using ImageUploader Component */}
+        {/* Images */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold mb-6">Images</h2>
           <ImageUploader
             maxImages={10}
             maxSize={5}
             onImagesChange={setImages}
+            initialPreviews={existingImages}
             folder="property-listings"
           />
         </div>
@@ -284,25 +320,25 @@ const onSubmit = async (data: PropertyFormData) => {
             type="button"
             onClick={() => router.back()}
             className="px-6 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
-            disabled={isUploading || createProperty.isPending}
+            disabled={isUploading || updateProperty.isPending}
           >
             Cancel
           </button>
           <button
             type="submit"
-            disabled={isUploading || createProperty.isPending}
+            disabled={isUploading || updateProperty.isPending}
             className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isUploading || createProperty.isPending ? (
+            {isUploading || updateProperty.isPending ? (
               <span className="flex items-center">
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                Creating Property...
+                Updating Property...
               </span>
             ) : (
-              'Create Property'
+              'Update Property'
             )}
           </button>
         </div>

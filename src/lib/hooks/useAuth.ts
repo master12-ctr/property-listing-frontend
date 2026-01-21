@@ -5,17 +5,26 @@ import toast from 'react-hot-toast';
 import { useEffect } from 'react';
 
 export function useAuth() {
-  const { user, isAuthenticated, login, logout, updateUser } = useAuthStore();
+  const { 
+    user, 
+    isAuthenticated, 
+    isLoading: authLoading,
+    login: storeLogin, 
+    logout: storeLogout, 
+    updateUser, 
+    setLoading,
+    initialize: initializeAuth 
+  } = useAuthStore();
+
+  // Initialize auth on mount
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
-      // Store auth data
-      localStorage.setItem('token', data.access_token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('tenantId', data.user.tenantId);
-      
-      login(data.user, data.access_token);
+      storeLogin(data.user, data.access_token, data.refresh_token);
       toast.success('Login successful!');
     },
     onError: (error: any) => {
@@ -26,11 +35,7 @@ export function useAuth() {
   const registerMutation = useMutation({
     mutationFn: authService.register,
     onSuccess: (data) => {
-      localStorage.setItem('token', data.access_token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('tenantId', data.user.tenantId);
-      
-      login(data.user, data.access_token);
+      storeLogin(data.user, data.access_token, data.refresh_token);
       toast.success('Registration successful!');
     },
     onError: (error: any) => {
@@ -41,13 +46,15 @@ export function useAuth() {
   const profileQuery = useQuery({
     queryKey: ['profile'],
     queryFn: authService.getProfile,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!user?.id,
     onSuccess: (data) => {
       updateUser(data);
     },
-    onError: () => {
-      // Don't logout on profile fetch error, just show toast
-      toast.error('Failed to fetch profile');
+    onError: (error: any) => {
+      if (error.response?.status === 401) {
+        storeLogout();
+        toast.error('Session expired. Please login again.');
+      }
     },
   });
 
@@ -55,28 +62,20 @@ export function useAuth() {
     return user?.permissions?.includes(permission) || false;
   };
 
-  // Check for admin permissions
   const isAdmin = hasPermission('system.metrics.read') || 
                   hasPermission('system.config.update') ||
                   hasPermission('user.read.all');
 
-  // Check for property owner permissions
   const isPropertyOwner = hasPermission('property.create') || 
                          hasPermission('property.update.own');
 
   return {
     user,
     isAuthenticated,
+    isLoading: authLoading || loginMutation.isPending || registerMutation.isPending || profileQuery.isLoading,
     login: (credentials: any) => loginMutation.mutateAsync(credentials),
     register: (data: any) => registerMutation.mutateAsync(data),
-    logout: () => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('tenantId');
-      logout();
-      window.location.href = '/login';
-    },
-    isLoading: loginMutation.isPending || registerMutation.isPending,
+    logout: storeLogout,
     profileQuery,
     hasPermission,
     isAdmin,

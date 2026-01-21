@@ -1,14 +1,21 @@
-export type PropertyStatus = 'draft' | 'published' | 'archived' | 'disabled';
-export type PropertyType = 'apartment' | 'house' | 'villa' | 'commercial' | 'land';
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  permissions: string[];
-  tenantId: string;
-  role?: string;
+export enum PropertyStatus {
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
+  ARCHIVED = 'archived',
+  DISABLED = 'disabled',
 }
+
+export enum PropertyType {
+  APARTMENT = 'apartment',
+  HOUSE = 'house',
+  VILLA = 'villa',
+  COMMERCIAL = 'commercial',
+  LAND = 'land',
+}
+
+// Use string literals for type flexibility
+export type PropertyStatusType = `${PropertyStatus}`;
+export type PropertyTypeType = `${PropertyType}`;
 
 export interface Property {
   id: string;
@@ -26,8 +33,8 @@ export interface Property {
   };
   price: number;
   images: string[];
-  status: PropertyStatus;
-  type: PropertyType;
+  status: PropertyStatusType;
+  type: PropertyTypeType;
   owner: {
     id: string;
     name: string;
@@ -45,6 +52,15 @@ export interface Property {
     name: string;
     slug: string;
   };
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  permissions: string[];
+  tenantId: string;
+  role?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -71,11 +87,11 @@ export interface RegisterData {
 export interface PropertyFilters {
   page?: number;
   limit?: number;
-  status?: PropertyStatus;
+  status?: PropertyStatusType | PropertyStatus;
   city?: string;
   minPrice?: number;
   maxPrice?: number;
-  type?: PropertyType;
+  type?: PropertyTypeType | PropertyType;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   near?: string;
@@ -104,7 +120,7 @@ export interface CreatePropertyDto {
     };
   };
   price: number;
-  type: PropertyType;
+  type: PropertyTypeType;
   images?: string[];
   metadata?: Record<string, any>;
 }
@@ -123,9 +139,9 @@ export interface UpdatePropertyDto {
     };
   };
   price?: number;
-  type?: PropertyType;
+  type?: PropertyTypeType;
   images?: string[];
-  status?: PropertyStatus;
+  status?: PropertyStatusType;
 }
 
 export interface SystemMetrics {
@@ -156,7 +172,7 @@ export interface SystemMetrics {
     recentProperties: Array<{
       id: string;
       title: string;
-      status: PropertyStatus;
+      status: PropertyStatusType;
       createdAt: string;
       owner: any;
     }>;
@@ -176,4 +192,20 @@ export interface SystemMetrics {
     }>;
   };
   updatedAt: string;
+}
+
+// Add this for property details response
+export interface PropertyDetail extends Property {
+  features?: string[];
+  amenities?: string[];
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
+  areaUnit?: string;
+  yearBuilt?: number;
+  contactInfo?: {
+    name: string;
+    phone: string;
+    email: string;
+  };
 }

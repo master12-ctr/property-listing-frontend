@@ -10,16 +10,16 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, requireAuth = true }: AuthGuardProps) {
-  const { isAuthenticated, profileQuery } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (requireAuth && !isAuthenticated && !profileQuery.isLoading) {
+    if (!isLoading && requireAuth && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, profileQuery.isLoading, requireAuth, router]);
+  }, [isAuthenticated, isLoading, requireAuth, router]);
 
-  if (profileQuery.isLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -31,7 +31,7 @@ export function AuthGuard({ children, requireAuth = true }: AuthGuardProps) {
   }
 
   if (requireAuth && !isAuthenticated) {
-    return null; // Will redirect in useEffect
+    return null;
   }
 
   return <>{children}</>;
