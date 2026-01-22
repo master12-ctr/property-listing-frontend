@@ -8,7 +8,7 @@ export function useProperties(filters?: PropertyFilters) {
   return useQuery({
     queryKey: ['properties', filters],
     queryFn: () => propertyService.getProperties(filters),
-    staleTime: 0, // Always refetch when data is stale
+    staleTime: 30000, // 30 seconds
   });
 }
 

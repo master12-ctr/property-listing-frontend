@@ -37,17 +37,25 @@ export const authService = {
 
 // Property Services
 export const propertyService = {
-  getProperties: (filters?: PropertyFilters) => {
-    const params: Record<string, any> = {};
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params[key] = value;
-        }
-      });
-    }
-    return apiClient.get<PaginatedResponse<Property>>('/properties', { params }).then((res) => res.data);
-  },
+getProperties: (filters?: PropertyFilters) => {
+  const params: Record<string, any> = {
+    page: filters?.page || 1,
+    limit: filters?.limit || 12,
+  };
+  
+  if (filters) {
+    // Add filters if they exist
+    if (filters.city) params.city = filters.city;
+    if (filters.minPrice) params.minPrice = filters.minPrice;
+    if (filters.maxPrice) params.maxPrice = filters.maxPrice;
+    if (filters.type) params.type = filters.type;
+    if (filters.status) params.status = filters.status;
+    if (filters.sortBy) params.sortBy = filters.sortBy;
+    if (filters.sortOrder) params.sortOrder = filters.sortOrder;
+  }
+  
+  return apiClient.get<PaginatedResponse<Property>>('/properties', { params }).then((res) => res.data);
+},
   
   getProperty: (id: string) =>
     apiClient.get<Property>(`/properties/${id}`).then((res) => res.data),
@@ -128,9 +136,14 @@ export const contactService = {
 };
 
 // User Services
+
+// lib/api/services.ts - Update user service methods
 export const userService = {
   updateProfile: (data: Partial<User>) =>
     apiClient.put('/users/profile', data).then((res) => res.data),
+  
+  updateUser: (id: string, data: Partial<User>) =>
+    apiClient.put(`/users/${id}`, data).then((res) => res.data),
   
   getAllUsers: () =>
     apiClient.get<User[]>('/users').then((res) => res.data),
@@ -138,7 +151,7 @@ export const userService = {
   getUserById: (id: string) =>
     apiClient.get<User>(`/users/${id}`).then((res) => res.data),
 
-   deleteUser: (id: string) =>
+  deleteUser: (id: string) =>
     apiClient.delete(`/users/${id}`).then((res) => res.data),
   
   addUserRole: (userId: string, roleId: string) =>
@@ -146,7 +159,17 @@ export const userService = {
   
   removeUserRole: (userId: string, roleId: string) =>
     apiClient.delete(`/users/${userId}/roles/${roleId}`).then((res) => res.data),
+
+  createUser: (data: any) =>
+    apiClient.post('/users', data).then((res) => res.data),
+
+  resetPassword: (userId: string, newPassword: string) =>
+    apiClient.post(`/users/${userId}/reset-password`, { newPassword }).then((res) => res.data),
+
+  toggleActive: (userId: string) =>
+    apiClient.post(`/users/${userId}/toggle-active`).then((res) => res.data),
 };
+
 
 // Role Services
 export const roleService = {

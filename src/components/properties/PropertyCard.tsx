@@ -19,6 +19,7 @@ interface PropertyCardProps {
 
 export function PropertyCard({ property, showActions = true, isOwnerView = false }: PropertyCardProps) {
   const { user } = useAuth();
+  const { isAdmin } = useAuth();
   const { toggleFavorite, hasFavorite } = useFavoritesStore();
   const favoriteMutation = useFavoriteProperty();
   
@@ -26,9 +27,10 @@ export function PropertyCard({ property, showActions = true, isOwnerView = false
   const isOwner = user?.id === property.owner.id;
   
   // Only allow favoriting published properties that user doesn't own
-  const canFavorite = showActions && 
-                     property.status === PropertyStatus.PUBLISHED && 
-                     !isOwner;
+const canFavorite = showActions && 
+                   property.status === PropertyStatus.PUBLISHED && 
+                   !isOwner &&
+                   !isAdmin; // Add admin check
   
   const handleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -50,7 +52,8 @@ export function PropertyCard({ property, showActions = true, isOwnerView = false
   
   return (
     <div className="group relative bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
-      <Link href={`/properties/${property.id}`}>
+      
+      <Link href={isOwnerView ? `/dashboard/properties/${property.id}` : `/properties/${property.id}`}>
         <div className="relative h-48 overflow-hidden">
           {property.images && property.images.length > 0 ? (
             <img

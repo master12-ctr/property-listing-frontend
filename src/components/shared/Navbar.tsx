@@ -16,11 +16,19 @@ export default function Navbar() {
               PropertyHub
             </Link>
             
-            <div className="hidden md:flex space-x-6">
-              <Link href="/properties" className="text-gray-700 hover:text-blue-600">
-                Browse Properties
-              </Link>
-            </div>
+{!isAuthenticated ? (
+  <div className="hidden md:flex space-x-6">
+    <Link href="/properties" className="text-gray-700 hover:text-blue-600">
+      Browse Properties
+    </Link>
+  </div>
+) : (
+  <div className="hidden md:flex space-x-6">
+    <Link href="/dashboard/properties" className="text-gray-700 hover:text-blue-600">
+      Browse Properties
+    </Link>
+  </div>
+)}
           </div>
           
           <div className="flex items-center space-x-4">

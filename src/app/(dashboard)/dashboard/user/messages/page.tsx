@@ -9,9 +9,12 @@ import {
   EnvelopeIcon, 
   CheckIcon, 
   TrashIcon,
-  ChatBubbleLeftRightIcon
+  ChatBubbleLeftRightIcon,
+  UserGroupIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 type MessageType = 'received' | 'sent';
 
@@ -19,6 +22,7 @@ export default function MessagesPage() {
   const [messageType, setMessageType] = useState<MessageType>('received');
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const queryClient = useQueryClient();
+  const { isAdmin, isPropertyOwner } = useAuth();
 
   // Fetch messages
   const { data: messages, isLoading } = useQuery({
@@ -84,7 +88,9 @@ export default function MessagesPage() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-            <p className="text-gray-600 mt-2">Manage your property inquiries</p>
+            <p className="text-gray-600 mt-2">
+              {isAdmin ? 'Manage all system messages' : 'Manage your property inquiries'}
+            </p>
           </div>
           {unreadCount?.count > 0 && (
             <div className="flex items-center space-x-2">
@@ -96,23 +102,37 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Send a Message</h3>
-          <Link 
-            href="/properties" 
-            className="btn-primary flex items-center space-x-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Browse Properties</span>
-          </Link>
+      {/* Admin-specific actions */}
+      {isAdmin ? (
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <div className="flex items-center space-x-4">
+            <UserGroupIcon className="h-8 w-8 text-purple-600" />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Admin Message Management</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                As an administrator, you can view all messages in the system.
+                {isPropertyOwner && ' You can also send messages to property owners.'}
+              </p>
+            </div>
+          </div>
         </div>
-        <p className="text-sm text-gray-600 mt-2">
-          To send a message, browse properties and use the "Contact Owner" button on any property page.
-        </p>
-      </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Send a Message</h3>
+            <Link 
+              href="/dashboard/properties" 
+              className="btn-primary flex items-center space-x-2"
+            >
+              <BuildingOfficeIcon className="w-4 h-4" />
+              <span>Browse Properties</span>
+            </Link>
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            To send a message, browse properties and use the "Contact Owner" button on any property page.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Messages List */}
@@ -129,7 +149,7 @@ export default function MessagesPage() {
                       : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  Received
+                  {isAdmin ? 'All Messages' : 'Received'}
                 </button>
                 <button
                   onClick={() => setMessageType('sent')}
@@ -230,7 +250,7 @@ export default function MessagesPage() {
 
         {/* Message Details */}
         <div className="space-y-6">
-          {/* Unread Stats */}
+          {/* Message Stats */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Message Stats</h3>
             <div className="space-y-4">
@@ -246,6 +266,19 @@ export default function MessagesPage() {
                   {unreadCount?.count || 0}
                 </span>
               </div>
+              {isAdmin && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Message Types</span>
+                  <div className="flex space-x-2">
+                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                      Received
+                    </span>
+                    <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
+                      Sent
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

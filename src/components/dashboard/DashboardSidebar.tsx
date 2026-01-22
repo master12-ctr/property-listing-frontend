@@ -1,3 +1,4 @@
+// components/dashboard/DashboardSidebar.tsx
 'use client';
 
 import { User } from '@/types';
@@ -16,6 +17,7 @@ import {
   UsersIcon,
   ShieldCheckIcon,
   ArchiveBoxIcon,
+  MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 
 interface DashboardSidebarProps {
@@ -23,10 +25,70 @@ interface DashboardSidebarProps {
 }
 
 export default function DashboardSidebar({ user }: DashboardSidebarProps) {
-  const { isAdmin, isPropertyOwner, hasPermission } = useAuth();
+  const { isAdmin, isPropertyOwner } = useAuth();
   const pathname = usePathname();
 
-  // Admin navigation
+  // Common navigation for all users (excluding admin dashboard)
+  const commonNavigation = [
+    {
+      name: 'User Dashboard',
+      href: '/dashboard/user',
+      icon: HomeIcon,
+    },
+  ];
+
+  // Add Browse Properties for non-admin users
+  if (!isAdmin) {
+    commonNavigation.push({
+      name: 'Browse Properties',
+      href: '/dashboard/properties',
+      icon: MagnifyingGlassIcon,
+    });
+  }
+
+  // Add Favorites for non-admin users
+  if (!isAdmin) {
+    commonNavigation.push({
+      name: 'Favorites',
+      href: '/dashboard/user/favorites',
+      icon: HeartIcon,
+    });
+  }
+
+  // Messages for all users
+  commonNavigation.push({
+    name: 'Messages',
+    href: '/dashboard/user/messages',
+    icon: InboxIcon,
+  });
+
+  // Profile for all users
+  commonNavigation.push({
+    name: 'Profile',
+    href: '/dashboard/user/profile',
+    icon: UserCircleIcon,
+  });
+
+  // Property Owner navigation
+  const ownerNavigation = isPropertyOwner ? [
+    {
+      name: 'My Properties',
+      href: '/dashboard/owner/properties',
+      icon: BuildingLibraryIcon,
+    },
+    {
+      name: 'Add Property',
+      href: '/dashboard/owner/properties/new',
+      icon: PlusCircleIcon,
+    },
+    {
+      name: 'Archived',
+      href: '/dashboard/owner/properties/archived',
+      icon: ArchiveBoxIcon,
+    },
+  ] : [];
+
+  // Admin navigation - distinct from user dashboard
   const adminNavigation = isAdmin ? [
     {
       name: 'Admin Dashboard',
@@ -45,49 +107,6 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
     },
   ] : [];
 
-  // Property Owner navigation
-  const ownerNavigation = isPropertyOwner ? [
-    {
-      name: 'My Properties',
-      href: '/dashboard/owner/properties',
-      icon: BuildingLibraryIcon,
-    },
-    {
-      name: 'Add Property',
-      href: '/dashboard/owner/properties/new',
-      icon: PlusCircleIcon,
-    },
-    {
-      name: 'Archived Properties',
-      href: '/dashboard/owner/properties/archived',
-      icon: ArchiveBoxIcon,
-    },
-  ] : [];
-
-  // Common user navigation
-  const commonNavigation = [
-    {
-      name: 'Dashboard',
-      href: '/dashboard/user',
-      icon: HomeIcon,
-    },
-    {
-      name: 'Favorites',
-      href: '/dashboard/user/favorites',
-      icon: HeartIcon,
-    },
-    {
-      name: 'Messages',
-      href: '/dashboard/user/messages',
-      icon: InboxIcon,
-    },
-    {
-      name: 'Profile',
-      href: '/dashboard/user/profile',
-      icon: UserCircleIcon,
-    },
-  ];
-
   // Settings only for authenticated users
   const settingsNavigation = [
     {
@@ -97,6 +116,7 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
     },
   ];
 
+  // Combine navigation based on user role
   const navigation = [
     ...commonNavigation,
     ...ownerNavigation,
@@ -144,7 +164,7 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
           
           return (
             <Link
-              key={item.name}
+              key={`${item.name}-${item.href}`}
               href={item.href}
               className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                 active
@@ -158,30 +178,6 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
           );
         })}
       </nav>
-
-      {/* Role-based guidance */}
-      <div className="mt-8 pt-8 border-t border-gray-200">
-        <h4 className="text-sm font-medium text-gray-900 mb-2">Your Permissions</h4>
-        <ul className="text-xs text-gray-600 space-y-1">
-          {isAdmin && (
-            <li>• Full system access & user management</li>
-          )}
-          {isPropertyOwner && (
-            <>
-              <li>• Create and manage properties</li>
-              <li>• Publish draft properties</li>
-              <li>• Archive published properties</li>
-            </>
-          )}
-          {!isAdmin && !isPropertyOwner && (
-            <>
-              <li>• Browse published properties</li>
-              <li>• Save favorites</li>
-              <li>• Contact property owners</li>
-            </>
-          )}
-        </ul>
-      </div>
     </div>
   );
 }

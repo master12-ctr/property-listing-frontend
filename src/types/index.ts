@@ -61,6 +61,13 @@ export interface User {
   permissions: string[];
   tenantId: string;
   role?: string;
+  isActive?: boolean;
+  deletedAt?: string;
+  metadata?: {
+    phone?: string;
+    bio?: string;
+    preferences?: Record<string, any>;
+  };
 }
 
 export interface PaginatedResponse<T> {
