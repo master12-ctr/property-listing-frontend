@@ -6,9 +6,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProperty, useUpdateProperty } from '@/lib/hooks/useProperties';
-import { PropertyType } from '@/types';
+import { PropertyStatus, PropertyType } from '@/types';
 import toast from 'react-hot-toast';
 import ImageUploader from '@/components/shared/ImageUploader';
+import { imageService } from '@/lib/api/services';
 
 const propertySchema = z.object({
   title: z.string()
@@ -40,13 +41,13 @@ export default function EditPropertyPage() {
   
   const [images, setImages] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    setValue,
     reset,
   } = useForm<PropertyFormData>({
     resolver: zodResolver(propertySchema),
@@ -55,6 +56,13 @@ export default function EditPropertyPage() {
   // Load property data into form
   useEffect(() => {
     if (property) {
+      // Check if property can be edited
+      if (property.status !== PropertyStatus.DRAFT && property.status !== PropertyStatus.ARCHIVED) {
+        toast.error('Only draft and archived properties can be edited');
+        router.push('/dashboard/owner/properties');
+        return;
+      }
+
       reset({
         title: property.title,
         description: property.description,
@@ -65,14 +73,25 @@ export default function EditPropertyPage() {
           state: property.location.state || '',
         },
         price: property.price,
-        type: property.type,
+        type: property.type as any,
       });
       setExistingImages(property.images || []);
     }
-  }, [property, reset]);
+  }, [property, reset, router]);
+
+  const handleImageDelete = (imageUrl: string) => {
+    setExistingImages(prev => prev.filter(img => img !== imageUrl));
+    setImagesToDelete(prev => [...prev, imageUrl]);
+  };
 
   const onSubmit = async (data: PropertyFormData) => {
     if (!property) return;
+
+    // Check if property can be edited
+    if (property.status !== PropertyStatus.DRAFT && property.status !== PropertyStatus.ARCHIVED) {
+      toast.error('Only draft and archived properties can be edited');
+      return;
+    }
 
     try {
       setIsUploading(true);
@@ -81,24 +100,16 @@ export default function EditPropertyPage() {
       
       // Upload new images if any
       if (images.length > 0) {
-        const formData = new FormData();
-        images.forEach((image) => {
-          formData.append('images', image);
+        const folder = `property-listings/property-${property.id}`;
+        const uploadResult = await imageService.uploadImages(images, folder);
+        imageUrls = [...imageUrls, ...uploadResult.urls];
+      }
+      
+      // Delete removed images
+      if (imagesToDelete.length > 0) {
+        await imageService.deleteImages(imagesToDelete).catch(err => {
+          console.warn('Failed to delete some images:', err);
         });
-        
-        // Upload images
-        const uploadResult = await fetch('/api/v1/images/upload', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: formData,
-        });
-        
-        if (uploadResult.ok) {
-          const uploadData = await uploadResult.json();
-          imageUrls = [...imageUrls, ...uploadData.urls];
-        }
       }
       
       // Prepare update data
@@ -114,6 +125,7 @@ export default function EditPropertyPage() {
         price: Number(data.price),
         type: data.type,
         images: imageUrls,
+        status: property.status === PropertyStatus.ARCHIVED ? PropertyStatus.DRAFT : property.status,
       };
 
       await updateProperty.mutateAsync({ id, data: updateData });
@@ -158,6 +170,17 @@ export default function EditPropertyPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Edit Property</h1>
         <p className="text-gray-600 mt-2">Update your property details</p>
+        <div className={`mt-2 px-4 py-2 rounded-md ${
+          property.status === PropertyStatus.DRAFT ? 'bg-yellow-50 text-yellow-800' :
+          property.status === PropertyStatus.ARCHIVED ? 'bg-gray-50 text-gray-800' :
+          'bg-red-50 text-red-800'
+        }`}>
+          <p className="text-sm">
+            <strong>Current Status:</strong> {property.status}
+            {property.status === PropertyStatus.ARCHIVED && 
+              ' - Property will be moved back to draft status after saving'}
+          </p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -218,7 +241,7 @@ export default function EditPropertyPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Price (ETB) *
+                  Price (USD) *
                 </label>
                 <input
                   {...register('price', { valueAsNumber: true })}
@@ -305,13 +328,50 @@ export default function EditPropertyPage() {
         {/* Images */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold mb-6">Images</h2>
-          <ImageUploader
-            maxImages={10}
-            maxSize={5}
-            onImagesChange={setImages}
-            initialPreviews={existingImages}
-            folder="property-listings"
-          />
+          
+          {/* Existing Images */}
+          {existingImages.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Current Images</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {existingImages.map((imageUrl, index) => (
+                  <div key={index} className="relative group">
+                    <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200">
+                      <img
+                        src={imageUrl}
+                        alt={`Property image ${index + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleImageDelete(imageUrl)}
+                      className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Upload New Images */}
+          <div className="mt-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Add New Images</h3>
+            <ImageUploader
+              maxImages={10 - existingImages.length}
+              maxSize={5}
+              onImagesChange={setImages}
+              folder={`property-listings/property-${property.id}`}
+            />
+          </div>
+          
+          <div className="mt-4 text-sm text-gray-600">
+            <p>Minimum 1 image required for publishing. Maximum 10 images allowed.</p>
+          </div>
         </div>
 
         {/* Submit Buttons */}
@@ -338,7 +398,7 @@ export default function EditPropertyPage() {
                 Updating Property...
               </span>
             ) : (
-              'Update Property'
+              `Update Property ${property.status === PropertyStatus.ARCHIVED ? 'and Unarchive' : ''}`
             )}
           </button>
         </div>

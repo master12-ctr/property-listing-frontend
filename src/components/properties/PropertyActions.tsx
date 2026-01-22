@@ -12,7 +12,10 @@ import {
   TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
+  ArrowUturnLeftIcon,
 } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 interface PropertyActionsProps {
   property: Property;
@@ -20,8 +23,12 @@ interface PropertyActionsProps {
 }
 
 export default function PropertyActions({ property, onUpdate }: PropertyActionsProps) {
+  const router = useRouter();
+  const { user } = useAuth();
   const [isPublishing, setIsPublishing] = useState(false);
   const queryClient = useQueryClient();
+  
+  const isOwner = user?.id === property.owner.id;
   
   const publishMutation = useMutation({
     mutationFn: () => propertyService.publishProperty(property.id),
@@ -60,6 +67,20 @@ export default function PropertyActions({ property, onUpdate }: PropertyActionsP
       toast.error(error.response?.data?.message || 'Failed to delete property');
     },
   });
+
+  const updateProperty = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      propertyService.updateProperty(id, data),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['property', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['owner-properties'] });
+      toast.success('Property updated successfully!');
+      onUpdate?.();
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update property');
+    },
+  });
   
   const validateForPublishing = async () => {
     try {
@@ -67,7 +88,7 @@ export default function PropertyActions({ property, onUpdate }: PropertyActionsP
       const validation = await propertyService.validateForPublishing(property.id);
       
       if (validation.isValid) {
-        if (window.confirm('Are you sure you want to publish this property?')) {
+        if (window.confirm('Are you sure you want to publish this property? Published properties cannot be edited.')) {
           await publishMutation.mutateAsync();
         }
       } else {
@@ -91,10 +112,34 @@ export default function PropertyActions({ property, onUpdate }: PropertyActionsP
       deleteMutation.mutate();
     }
   };
+
+  const handleUnarchive = () => {
+    if (window.confirm('Are you sure you want to unarchive this property? It will be moved back to draft status.')) {
+      updateProperty.mutate({
+        id: property.id,
+        data: { status: PropertyStatus.DRAFT }
+      });
+    }
+  };
+  
+  // Only show actions for property owners
+  if (!isOwner) {
+    return (
+      <div className="flex items-center space-x-2">
+        <a
+          href={`/properties/${property.id}`}
+          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+          title="View Property"
+        >
+          <EyeIcon className="w-5 h-5" />
+        </a>
+      </div>
+    );
+  }
   
   return (
     <div className="flex items-center space-x-2">
-      {/* View Button - Always visible */}
+      {/* View Button - Always visible for owners */}
       <a
         href={`/properties/${property.id}`}
         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -135,6 +180,18 @@ export default function PropertyActions({ property, onUpdate }: PropertyActionsP
           title="Archive Property"
         >
           <ArchiveBoxIcon className="w-5 h-5" />
+        </button>
+      )}
+      
+      {/* Unarchive Button - Only for archived properties */}
+      {property.status === PropertyStatus.ARCHIVED && (
+        <button
+          onClick={handleUnarchive}
+          disabled={updateProperty.isPending}
+          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50"
+          title="Unarchive to Draft"
+        >
+          <ArrowUturnLeftIcon className="w-5 h-5" />
         </button>
       )}
       

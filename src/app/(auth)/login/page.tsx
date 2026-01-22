@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
 
 const loginSchema = z.object({
   email: z.string()
@@ -46,7 +45,29 @@ export default function LoginPage() {
       router.push('/');
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      
+      // Handle different error types
+      if (err.response?.status === 401) {
+        setError('Invalid email or password. Please try again.');
+      } else if (err.response?.status === 400) {
+        setError('Invalid request. Please check your input.');
+      } else if (err.response?.status === 404) {
+        setError('User not found. Please check your email.');
+      } else if (err.response?.data?.message) {
+        // Check for specific error messages
+        const errorMsg = err.response.data.message.toLowerCase();
+        if (errorMsg.includes('invalid credentials') || 
+            errorMsg.includes('invalid password') || 
+            errorMsg.includes('user not found')) {
+          setError('Invalid email or password. Please try again.');
+        } else {
+          setError(err.response.data.message);
+        }
+      } else if (err.message?.includes('Network Error')) {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError('Login failed. Please try again.');
+      }
     }
   };
   

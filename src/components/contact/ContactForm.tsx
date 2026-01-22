@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { contactService } from '@/lib/api/services';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 const contactSchema = z.object({
   name: z.string()
@@ -34,18 +35,30 @@ interface ContactFormProps {
 
 export default function ContactForm({ propertyId, propertyTitle, onSuccess }: ContactFormProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<ContactFormData>({
     resolver: zodResolver(contactSchema),
     defaultValues: {
       phone: '',
     },
   });
+
+  // Pre-fill form with user data if logged in
+  useEffect(() => {
+    if (user) {
+      setValue('name', user.name || '');
+      setValue('email', user.email || '');
+      // You can add phone from user metadata if available
+    }
+  }, [user, setValue]);
   
   const sendMessageMutation = useMutation({
     mutationFn: (data: ContactFormData) =>
@@ -58,9 +71,18 @@ export default function ContactForm({ propertyId, propertyTitle, onSuccess }: Co
       reset();
       setIsOpen(false);
       onSuccess?.();
+      // Refresh messages list
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to send message');
+      const message = error.response?.data?.message || 'Failed to send message';
+      toast.error(message);
+      
+      // If property is not published, show specific guidance
+      if (message.includes('not published') || message.includes('not available')) {
+        toast.error('This property is not currently available for contact.');
+      }
     },
   });
   
@@ -79,7 +101,7 @@ export default function ContactForm({ propertyId, propertyTitle, onSuccess }: Co
       
       {isOpen && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b">
               <h3 className="text-lg font-semibold text-gray-900">
                 Contact Property Owner
@@ -146,6 +168,13 @@ export default function ContactForm({ propertyId, propertyTitle, onSuccess }: Co
                 {errors.message && (
                   <p className="mt-1 text-sm text-red-600">{errors.message.message}</p>
                 )}
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> Your contact information will be shared with the property owner.
+                  Please be respectful in your communication.
+                </p>
               </div>
               
               <div className="flex justify-end space-x-3 pt-4">

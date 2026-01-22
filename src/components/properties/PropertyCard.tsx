@@ -23,12 +23,18 @@ export function PropertyCard({ property, showActions = true, isOwnerView = false
   const favoriteMutation = useFavoriteProperty();
   
   const isFavorited = hasFavorite(property.id) || property.isFavorited;
+  const isOwner = user?.id === property.owner.id;
+  
+  // Only allow favoriting published properties that user doesn't own
+  const canFavorite = showActions && 
+                     property.status === PropertyStatus.PUBLISHED && 
+                     !isOwner;
   
   const handleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (!showActions) return;
+    if (!canFavorite) return;
     
     const currentFavoriteStatus = isFavorited || false;
     
@@ -41,8 +47,6 @@ export function PropertyCard({ property, showActions = true, isOwnerView = false
       isFavorited: currentFavoriteStatus,
     });
   };
-  
-  const isOwner = user?.id === property.owner.id;
   
   return (
     <div className="group relative bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
@@ -71,7 +75,7 @@ export function PropertyCard({ property, showActions = true, isOwnerView = false
             </span>
           </div>
           
-          {showActions && (
+          {canFavorite && (
             <button
               onClick={handleFavorite}
               className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 z-10"
@@ -108,10 +112,12 @@ export function PropertyCard({ property, showActions = true, isOwnerView = false
             <span>{property.views} views</span>
           </div>
           
-          <div className="flex items-center space-x-1">
-            <HeartIcon className="w-4 h-4" />
-            <span>{property.favoritesCount}</span>
-          </div>
+          {property.status === PropertyStatus.PUBLISHED && (
+            <div className="flex items-center space-x-1">
+              <HeartIcon className="w-4 h-4" />
+              <span>{property.favoritesCount}</span>
+            </div>
+          )}
         </div>
         
         <div className="mt-4 pt-4 border-t border-gray-100">

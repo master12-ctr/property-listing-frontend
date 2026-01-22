@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { PropertyType, PropertyStatus } from '@/types';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 const propertyTypes: { value: PropertyType; label: string }[] = [
   { value: PropertyType.APARTMENT, label: 'Apartment' },
@@ -10,13 +11,6 @@ const propertyTypes: { value: PropertyType; label: string }[] = [
   { value: PropertyType.VILLA, label: 'Villa' },
   { value: PropertyType.COMMERCIAL, label: 'Commercial' },
   { value: PropertyType.LAND, label: 'Land' },
-];
-
-const statusOptions: { value: PropertyStatus; label: string }[] = [
-  { value: PropertyStatus.DRAFT, label: 'Draft' },
-  { value: PropertyStatus.PUBLISHED, label: 'Published' },
-  { value: PropertyStatus.ARCHIVED, label: 'Archived' },
-  { value: PropertyStatus.DISABLED, label: 'Disabled' },
 ];
 
 const sortOptions = [
@@ -30,16 +24,42 @@ export default function PropertyFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { isAdmin, isPropertyOwner } = useAuth();
+  
+  // Regular users can only see published properties
+  const defaultStatus = (isAdmin || isPropertyOwner) ? '' : PropertyStatus.PUBLISHED;
   
   const [filters, setFilters] = useState({
     city: searchParams.get('city') || '',
     minPrice: searchParams.get('minPrice') || '',
     maxPrice: searchParams.get('maxPrice') || '',
     type: searchParams.get('type') || '',
-    status: searchParams.get('status') || '',
+    status: searchParams.get('status') || defaultStatus,
     sortBy: searchParams.get('sortBy') || 'createdAt',
     sortOrder: searchParams.get('sortOrder') || 'desc',
   });
+
+  // Status options based on user role
+  const getStatusOptions = () => {
+    const baseOptions = [
+      { value: PropertyStatus.PUBLISHED, label: 'Published' },
+    ];
+    
+    if (isAdmin || isPropertyOwner) {
+      return [
+        { value: '', label: 'All Statuses' },
+        ...baseOptions,
+        { value: PropertyStatus.DRAFT, label: 'Draft' },
+        { value: PropertyStatus.ARCHIVED, label: 'Archived' },
+        { value: PropertyStatus.DISABLED, label: 'Disabled' },
+      ];
+    }
+    
+    return [
+      { value: '', label: 'All Statuses' },
+      ...baseOptions,
+    ];
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -69,7 +89,7 @@ export default function PropertyFilters() {
       minPrice: '',
       maxPrice: '',
       type: '',
-      status: '',
+      status: defaultStatus,
       sortBy: 'createdAt',
       sortOrder: 'desc',
     });
@@ -153,14 +173,19 @@ export default function PropertyFilters() {
             value={filters.status}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={!isAdmin && !isPropertyOwner}
           >
-            <option value="">All Statuses</option>
-            {statusOptions.map((status) => (
+            {getStatusOptions().map((status) => (
               <option key={status.value} value={status.value}>
                 {status.label}
               </option>
             ))}
           </select>
+          {(!isAdmin && !isPropertyOwner) && (
+            <p className="mt-1 text-xs text-gray-500">
+              Regular users can only view published properties
+            </p>
+          )}
         </div>
         
         <div>

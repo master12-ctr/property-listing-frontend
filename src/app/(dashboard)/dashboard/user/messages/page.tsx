@@ -9,7 +9,6 @@ import {
   EnvelopeIcon, 
   CheckIcon, 
   TrashIcon,
-  ArrowPathIcon,
   ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
@@ -61,10 +60,19 @@ export default function MessagesPage() {
   });
 
   const handleMarkAsRead = async (messageId: string) => {
+    if (!messageId) {
+      toast.error('Invalid message ID');
+      return;
+    }
     await markAsReadMutation.mutateAsync(messageId);
   };
 
   const handleDeleteMessage = async (messageId: string) => {
+    if (!messageId) {
+      toast.error('Invalid message ID');
+      return;
+    }
+    
     if (window.confirm('Are you sure you want to delete this message?')) {
       await deleteMessageMutation.mutateAsync(messageId);
     }
@@ -72,43 +80,6 @@ export default function MessagesPage() {
 
   return (
     <div className="max-w-7xl mx-auto">
-
-
-        <div className="mb-8">
-  <div className="flex justify-between items-center">
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-      <p className="text-gray-600 mt-2">Manage your property inquiries</p>
-    </div>
-    {unreadCount?.count > 0 && (
-      <div className="flex items-center space-x-2">
-        <span className="px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full">
-          {unreadCount.count} unread
-        </span>
-      </div>
-    )}
-  </div>
-</div>
-
-<div className="bg-white rounded-xl shadow-md p-6 mb-8">
-  <div className="flex items-center justify-between">
-    <h3 className="text-lg font-semibold text-gray-900">Send a Message</h3>
-    <Link 
-      href="/properties" 
-      className="btn-primary flex items-center space-x-2"
-    >
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-      </svg>
-      <span>Browse Properties</span>
-    </Link>
-  </div>
-  <p className="text-sm text-gray-600 mt-2">
-    To send a message, browse properties and use the "Contact Owner" button on any property page.
-  </p>
-</div>
-
-
       <div className="mb-8">
         <div className="flex justify-between items-center">
           <div>
@@ -123,6 +94,24 @@ export default function MessagesPage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">Send a Message</h3>
+          <Link 
+            href="/properties" 
+            className="btn-primary flex items-center space-x-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Browse Properties</span>
+          </Link>
+        </div>
+        <p className="text-sm text-gray-600 mt-2">
+          To send a message, browse properties and use the "Contact Owner" button on any property page.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -173,9 +162,9 @@ export default function MessagesPage() {
                   </p>
                 </div>
               ) : (
-                messages.map((message: any) => (
+                messages.map((message: any, index: number) => (
                   <div
-                    key={message.id}
+                    key={`${message.id || message._id || index}`}
                     className={`p-6 hover:bg-gray-50 cursor-pointer transition-colors ${
                       !message.isRead && messageType === 'received' ? 'bg-blue-50' : ''
                     }`}
@@ -212,7 +201,7 @@ export default function MessagesPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleMarkAsRead(message.id);
+                              handleMarkAsRead(message.id || message._id);
                             }}
                             className="p-2 text-green-600 hover:bg-green-50 rounded-full"
                             title="Mark as read"
@@ -223,7 +212,7 @@ export default function MessagesPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteMessage(message.id);
+                            handleDeleteMessage(message.id || message._id);
                           }}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-full"
                           title="Delete message"
@@ -319,14 +308,14 @@ export default function MessagesPage() {
                 <div className="flex space-x-3 pt-4">
                   {!selectedMessage.isRead && messageType === 'received' && (
                     <button
-                      onClick={() => handleMarkAsRead(selectedMessage.id)}
+                      onClick={() => handleMarkAsRead(selectedMessage.id || selectedMessage._id)}
                       className="flex-1 btn-primary"
                     >
                       Mark as Read
                     </button>
                   )}
                   <button
-                    onClick={() => handleDeleteMessage(selectedMessage.id)}
+                    onClick={() => handleDeleteMessage(selectedMessage.id || selectedMessage._id)}
                     className="flex-1 btn-secondary"
                   >
                     Delete

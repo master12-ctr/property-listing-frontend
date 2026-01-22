@@ -14,6 +14,8 @@ import {
   InboxIcon,
   PlusCircleIcon,
   UsersIcon,
+  ShieldCheckIcon,
+  ArchiveBoxIcon,
 } from '@heroicons/react/24/outline';
 
 interface DashboardSidebarProps {
@@ -21,38 +23,49 @@ interface DashboardSidebarProps {
 }
 
 export default function DashboardSidebar({ user }: DashboardSidebarProps) {
-  const { isAdmin, isPropertyOwner } = useAuth();
+  const { isAdmin, isPropertyOwner, hasPermission } = useAuth();
   const pathname = usePathname();
 
-  const navigation = [
-    ...(isPropertyOwner
-      ? [
-          {
-            name: 'My Properties',
-            href: '/dashboard/owner/properties',
-            icon: BuildingLibraryIcon,
-          },
-          {
-            name: 'Add Property',
-            href: '/dashboard/owner/properties/new',
-            icon: PlusCircleIcon,
-          },
-        ]
-      : []),
-    ...(isAdmin
-      ? [
-          {
-            name: 'Admin Dashboard',
-            href: '/dashboard/admin',
-            icon: ChartBarIcon,
-          },
-          {
-          name: 'User Management', // Add this
-          href: '/dashboard/admin/users',
-          icon: UsersIcon,
-        },
-        ]
-      : []),
+  // Admin navigation
+  const adminNavigation = isAdmin ? [
+    {
+      name: 'Admin Dashboard',
+      href: '/dashboard/admin',
+      icon: ShieldCheckIcon,
+    },
+    {
+      name: 'User Management',
+      href: '/dashboard/admin/users',
+      icon: UsersIcon,
+    },
+    {
+      name: 'System Metrics',
+      href: '/dashboard/admin/metrics',
+      icon: ChartBarIcon,
+    },
+  ] : [];
+
+  // Property Owner navigation
+  const ownerNavigation = isPropertyOwner ? [
+    {
+      name: 'My Properties',
+      href: '/dashboard/owner/properties',
+      icon: BuildingLibraryIcon,
+    },
+    {
+      name: 'Add Property',
+      href: '/dashboard/owner/properties/new',
+      icon: PlusCircleIcon,
+    },
+    {
+      name: 'Archived Properties',
+      href: '/dashboard/owner/properties/archived',
+      icon: ArchiveBoxIcon,
+    },
+  ] : [];
+
+  // Common user navigation
+  const commonNavigation = [
     {
       name: 'Dashboard',
       href: '/dashboard/user',
@@ -73,11 +86,22 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
       href: '/dashboard/user/profile',
       icon: UserCircleIcon,
     },
+  ];
+
+  // Settings only for authenticated users
+  const settingsNavigation = [
     {
       name: 'Settings',
       href: '/dashboard/user/settings',
       icon: Cog6ToothIcon,
     },
+  ];
+
+  const navigation = [
+    ...commonNavigation,
+    ...ownerNavigation,
+    ...adminNavigation,
+    ...settingsNavigation,
   ];
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
@@ -134,6 +158,30 @@ export default function DashboardSidebar({ user }: DashboardSidebarProps) {
           );
         })}
       </nav>
+
+      {/* Role-based guidance */}
+      <div className="mt-8 pt-8 border-t border-gray-200">
+        <h4 className="text-sm font-medium text-gray-900 mb-2">Your Permissions</h4>
+        <ul className="text-xs text-gray-600 space-y-1">
+          {isAdmin && (
+            <li>• Full system access & user management</li>
+          )}
+          {isPropertyOwner && (
+            <>
+              <li>• Create and manage properties</li>
+              <li>• Publish draft properties</li>
+              <li>• Archive published properties</li>
+            </>
+          )}
+          {!isAdmin && !isPropertyOwner && (
+            <>
+              <li>• Browse published properties</li>
+              <li>• Save favorites</li>
+              <li>• Contact property owners</li>
+            </>
+          )}
+        </ul>
+      </div>
     </div>
   );
 }

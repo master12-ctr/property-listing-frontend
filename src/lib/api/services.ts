@@ -9,13 +9,21 @@ import {
   User,
   CreatePropertyDto,
   UpdatePropertyDto,
-  SystemMetrics
+  SystemMetrics,
+  PropertyStatus
 } from '@/types';
 
 // Auth Services
+// Update the authService login method
 export const authService = {
   login: (credentials: LoginCredentials) =>
-    apiClient.post('/auth/login', credentials).then((res) => res.data),
+    apiClient.post('/auth/login', credentials).then((res) => res.data).catch(error => {
+      // Handle specific error messages
+      if (error.response?.status === 401) {
+        throw new Error('Invalid email or password');
+      }
+      throw error;
+    }),
   
   register: (data: RegisterData) =>
     apiClient.post('/auth/register', data).then((res) => res.data),
@@ -91,6 +99,14 @@ getFavorites: () =>
 // Make sure the contactService has correct endpoint:
 sendMessage: (data: ContactMessage) =>
   apiClient.post('/contact', data).then((res) => res.data),
+
+
+ getArchivedProperties: () =>
+    apiClient.get<Property[]>('/properties/my', { 
+      params: { status: PropertyStatus.ARCHIVED } 
+    }).then((res) => res.data),
+
+
 };
 
 // Contact Services
